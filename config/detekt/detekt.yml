@@ -1,0 +1,74 @@
+complexity:
+  CyclomaticComplexMethod:
+    active: true
+    allowedComplexity: 20
+    ignoreAnnotated:
+      - Composable
+  LongMethod:
+    active: true
+    allowedLines: 80
+    ignoreAnnotated:
+      - Composable
+    excludes:
+      - '**/test/**'
+      - '**/androidTest/**'
+  LargeClass:
+    active: true
+    excludes:
+      - '**/test/**'
+      - '**/androidTest/**'
+  LongParameterList:
+    active: true
+    allowedFunctionParameters: 10
+    allowedConstructorParameters: 10
+    ignoreAnnotated:
+      - Composable
+  TooManyFunctions:
+    active: true
+    allowedFunctionsPerFile: 40
+    allowedFunctionsPerClass: 40
+    allowedFunctionsPerInterface: 85
+    allowedFunctionsPerObject: 25
+    ignorePrivate: true
+
+naming:
+  FunctionNaming:
+    active: true
+    ignoreAnnotated:
+      - Composable
+
+style:
+  MagicNumber:
+    active: true
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreEnums: true
+    ignoreHashCodeFunction: true
+    excludes:
+      - '**/test/**'
+      - '**/androidTest/**'
+  MaxLineLength:
+    active: true
+    maxLineLength: 100
+    excludePackageStatements: true
+    excludeImportStatements: true
+    excludeCommentStatements: true
+    excludes:
+      - '**/test/**'
+      - '**/androidTest/**'
+  ReturnCount:
+    active: true
+    max: 4
+    excludeGuardClauses: true
+  WildcardImport:
+    active: true
+
+exceptions:
+  SwallowedException:
+    active: true
+  TooGenericExceptionCaught:
+    active: false
+
+potential-bugs:
+  ImplicitDefaultLocale:
+    active: true

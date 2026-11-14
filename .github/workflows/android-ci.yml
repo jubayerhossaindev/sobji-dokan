@@ -1,0 +1,117 @@
+
+name: Android CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: android-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Quality Gate, Tests, Lint & Debug APK
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          check-latest: true
+          cache: gradle
+
+      - name: Install Android CLI
+        run: |
+          set -euo pipefail
+
+          sudo install -d -m 0755 /etc/apt/keyrings
+
+          curl -fsSL https://dl.google.com/linux/linux_signing_key.pub |
+            sudo tee /etc/apt/keyrings/google.asc >/dev/null
+
+          echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google.asc] http://dl.google.com/android/cli/latest/debian/ stable main" |
+            sudo tee /etc/apt/sources.list.d/android-cli.list >/dev/null
+
+          sudo apt-get update
+          sudo apt-get install -y android-cli
+
+          android --version
+
+      - name: Install Android SDK Packages
+        run: |
+          set -euo pipefail
+
+          test -d "$ANDROID_HOME"
+
+          android --sdk="$ANDROID_HOME" sdk install \
+            platforms/android-36.1 \
+            build-tools/36.0.0 \
+            platform-tools
+
+      - name: Generate Debug Keystore
+        run: |
+          set -euo pipefail
+
+          keytool -genkeypair -noprompt \
+            -keystore "$GITHUB_WORKSPACE/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+          chmod 600 "$GITHUB_WORKSPACE/debug.keystore"
+
+          keytool -list \
+            -keystore "$GITHUB_WORKSPACE/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey >/dev/null
+
+      - name: Format Check, Static Analysis, Tests, Coverage, Lint & Debug APK
+        run: |
+          set -euo pipefail
+
+          chmod +x gradlew
+
+          ./gradlew --stacktrace \
+            spotlessCheck \
+            :app:detekt \
+            :app:testDebugUnitTest \
+            :app:jacocoTestReport \
+            :app:lintDebug \
+            :app:assembleDebug
+
+      - name: Remove Temporary Debug Keystore
+        if: always()
+        run: rm -f "$GITHUB_WORKSPACE/debug.keystore"
+
+      - name: Upload APK and Diagnostic Reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sobji-dokan-debug
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/reports/detekt/
+            app/build/reports/jacoco/
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/test-results/testDebugUnitTest/
+            app/build/reports/lint-results-debug.html
+            app/build/reports/lint-results-debug.xml
+          if-no-files-found: warn
+          retention-days: 14
